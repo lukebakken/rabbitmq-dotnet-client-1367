@@ -1,47 +1,40 @@
-# RabbitMQ.Explore
+# RabbitMQ .NET client with X509 certs
 
 ## Usage
 
-* Set everything up
+* Import CA certificate into the current user's Trusted Root store
     ```
-    .\setup.ps1
+    .\import-ca-certificate.ps1
     ```
-* Start RabbitMQ in one Powershell session
+* Start RabbitMQ in one Powershell session. Note: Erlang 26 must be installed!
     ```
-    .\run-rabbitmq-server.ps1
+    .\run-rabbitmq.ps1
     ```
 * Run client application in another Powershell session
     ```
+    cd dotnet
     dotnet build
-    cd RabbitMQ.Explore
     dotnet run
     ```
-* Revert changes
-    ```
-    cd -
-    git restore RabbitMQ.Explore/appsettings.json
-    ```
-
-Note: you can run the project from Visual Studio as well, just be sure that `appsettings.json` contains the relative path to the `pfx` certificate.
 
 ## Info
 
 ### Convert `pem` to `crt`
 
 ```
-openssl x509 -in .\certs\ca_certificate.pem -out .\certs\ca_certificate.crt
+openssl x509 -in ./certs/ca_certificate.pem -out ./certs/ca_certificate.crt
 ```
 
 ### Create `pfx` file
 
 ```
-openssl pkcs12 -inkey .\certs\client_localhost_key.pem -in .\certs\client_localhost_certificate.pem -certfile .\certs\ca_certificate.pem -export -out .\certs\client_localhost_certificate.pfx
+openssl pkcs12 -inkey ./certs/client_localhost_key.pem -in ./certs/client_localhost_certificate.pem -certfile ./certs/ca_certificate.pem -export -out ./certs/client_localhost_certificate.pfx
 ```
 
 *NOTE*: password used `test1234`
 
-### Run OpenSSL client
+### Run OpenSSL client against RabbitMQ
 
 ```
-openssl s_client -tls1_2 -connect localhost:5671 -CAfile .\certs\ca_certificate.pem -cert .\certs\client_localhost_certificate.pem -key .\certs\client_localhost_key.pem
+openssl s_client -connect localhost:5671 -CAfile ./certs/ca_certificate.pem -cert ./certs/client_localhost_certificate.pem -key ./certs/client_localhost_key.pem
 ```
