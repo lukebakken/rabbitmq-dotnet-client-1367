@@ -1,10 +1,4 @@
-using Microsoft.Extensions.Configuration;
 using RabbitMQ.Client;
-using System.Net;
-using System.Net.Security;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
 
 namespace RabbitMqCertCheck
 {
@@ -12,103 +6,52 @@ namespace RabbitMqCertCheck
     {
         public static void Main(string[] args)
         {
+            Console.WriteLine($"[INFO] working directory: {System.IO.Directory.GetCurrentDirectory()}");
             try
             {
-                // Load configuration from appsettings.json
-                var configuration = new ConfigurationBuilder()
-                    //.SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json")
-                    .Build();
+                string rabbitMqHostname = "localhost";
+                int rabbitMqPort = 5671;
+                string rabbitMqUsername = "guest";
+                string rabbitMqPassword = "guest";
+                string certificatePath = "..\\certs\\client_localhost_certificate.pfx";
+                string certificatePassphrase = "test1234";
+                string virtualHost = "/";
 
-                // Get RabbitMQ configuration values from appsettings.json
-                var rabbitMqConfig = configuration.GetSection("RabbitMQConfig");
-                string rabbitMqHostname = rabbitMqConfig["Hostname"];
-                int rabbitMqPort = int.Parse(rabbitMqConfig["Port"]);
-                string rabbitMqUsername = rabbitMqConfig["Username"];
-                string rabbitMqPassword = rabbitMqConfig["Password"];
-                string certificatePath = rabbitMqConfig["CertificatePath"];
-                string certificatePassphrase = rabbitMqConfig["CertificatePassphrase"];
-                string virtualHost = rabbitMqConfig["VirtualHost"];
-                string thumbprint = rabbitMqConfig["ThumbPrint"];
-
-                // Create the RabbitMQ connection factory
                 var factory = new ConnectionFactory
                 {
-
                     Port = rabbitMqPort,
-                    UserName = null,
-                    Password = null,
-
+                    UserName = rabbitMqUsername,
+                    Password = rabbitMqPassword,
                     Ssl = new SslOption
                     {
-                        Certs = new X509CertificateCollection { GetCertificate(thumbprint) },
                         Enabled = true,
                         ServerName = rabbitMqHostname,
-                        //CertPath = certificatePath,
-                        //CertPassphrase = certificatePassphrase,
-                        AcceptablePolicyErrors = SslPolicyErrors.RemoteCertificateNameMismatch | SslPolicyErrors.RemoteCertificateChainErrors | SslPolicyErrors.RemoteCertificateNotAvailable,
-                        Version = SslProtocols.Tls12 // Adjust the SSL protocol version if needed
-
+                        CertPath = certificatePath,
+                        CertPassphrase = certificatePassphrase,
                     }
                 };
 
 
                 factory.HostName = rabbitMqHostname;
-
                 factory.VirtualHost = virtualHost;
-                //RequestedChannelMax = 5000,
 
-                factory.AuthMechanisms = new IAuthMechanismFactory[] { new ExternalMechanismFactory() };
-
-                // Create the RabbitMQ connection
                 using (var connection = factory.CreateConnection())
                 {
-                    Console.WriteLine("CreateConnection statement crossed");
-                    // Create channel and perform RabbitMQ operations
+                    Console.WriteLine("[INFO] connection has been created...");
                     using (var channel = connection.CreateModel())
                     {
-                        Console.WriteLine("Inside Create Model");
-                        // Your RabbitMQ operations go here
-                        // For example, you can publish or consume messages
-                        // Refer to RabbitMQ .NET SDK documentation for more details
-                        // https://www.rabbitmq.com/dotnet-api-guide.html
+                        Console.WriteLine("[INFO] inside CreateModel, any key to exit...");
+                        Console.ReadLine();
+                        Console.WriteLine("[INFO] EXITING!");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message + "   " + ex.StackTrace + ex.InnerException);
-            }
-        }
-
-        public static X509Certificate2 GetCertificate(string thumbprint)
-        {
-            // strip any non-hexadecimal values and make uppercase
-            thumbprint = Regex.Replace(thumbprint, @"[^\da-fA-F]", string.Empty).ToUpper();
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-
-            try
-            {
-                store.Open(OpenFlags.ReadOnly);
-
-                var certCollection = store.Certificates;
-                var signingCert = certCollection.Find(X509FindType.FindByThumbprint, thumbprint, false);
-                if (signingCert.Count == 0)
-                {
-                    throw new FileNotFoundException(string.Format("Cert with thumbprint: '{0}' not found in local machine cert store.", thumbprint));
-                }
-                else
-                {
-                    Console.WriteLine("Cert:" + signingCert[0].Issuer + "\n " + "\n \n \n");
-                }
-
-                return signingCert[0];
-            }
-            finally
-            {
-                store.Close();
+                Console.Error.WriteLine($"[ERROR] exception: {ex.Message}");
+                Console.Error.WriteLine($"stack: {ex.StackTrace}");
+                Console.Error.WriteLine($"inner ex: {ex.InnerException}");
             }
         }
     }
 }
-
