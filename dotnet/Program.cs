@@ -11,29 +11,24 @@ namespace RabbitMqCertCheck
             {
                 string rabbitMqHostname = "localhost";
                 int rabbitMqPort = 5671;
-                string rabbitMqUsername = "guest";
-                string rabbitMqPassword = "guest";
                 string certificatePath = "..\\certs\\client_localhost_certificate.pfx";
                 string certificatePassphrase = "test1234";
                 string virtualHost = "/";
 
                 var factory = new ConnectionFactory
                 {
+                    VirtualHost = virtualHost,
+                    HostName = rabbitMqHostname,
                     Port = rabbitMqPort,
-                    UserName = rabbitMqUsername,
-                    Password = rabbitMqPassword,
                     Ssl = new SslOption
                     {
                         Enabled = true,
                         ServerName = rabbitMqHostname,
                         CertPath = certificatePath,
                         CertPassphrase = certificatePassphrase,
-                    }
+                    },
+                    AuthMechanisms = new IAuthMechanismFactory[] { new ExternalMechanismFactory() }
                 };
-
-
-                factory.HostName = rabbitMqHostname;
-                factory.VirtualHost = virtualHost;
 
                 using (var connection = factory.CreateConnection())
                 {

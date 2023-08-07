@@ -15,6 +15,7 @@ $rabbitmq_dir = Join-Path -Path $curdir -ChildPath "rabbitmq_server-$rabbitmq_ve
 $rabbitmq_sbin = Join-Path -Path $rabbitmq_dir -ChildPath 'sbin'
 $rabbitmq_download_url = "https://github.com/rabbitmq/rabbitmq-server/releases/download/v$rabbitmq_version/rabbitmq-server-windows-$rabbitmq_version.zip"
 $rabbitmq_zip_file = Join-Path -Path $curdir -ChildPath "rabbitmq-server-windows-$rabbitmq_version.zip"
+$rabbitmqctl_cmd = Join-Path -Path $rabbitmq_sbin -ChildPath 'rabbitmqctl.bat'
 $rabbitmq_plugins_cmd = Join-Path -Path $rabbitmq_sbin -ChildPath 'rabbitmq-plugins.bat'
 $rabbitmq_server_cmd = Join-Path -Path $rabbitmq_sbin -ChildPath 'rabbitmq-server.bat'
 
@@ -27,7 +28,6 @@ if (!(Test-Path -Path $rabbitmq_dir))
     New-Item -Path $rabbitmq_base -ItemType Directory
     Invoke-WebRequest -Verbose -UseBasicParsing -Uri $rabbitmq_download_url -OutFile $rabbitmq_zip_file
     Expand-Archive -Path $rabbitmq_zip_file -DestinationPath $curdir
-    & $rabbitmq_plugins_cmd enable rabbitmq_management
 }
 
 $pwd_slashes = $curdir -Replace '\\','/'
@@ -35,12 +35,34 @@ $pwd_slashes = $curdir -Replace '\\','/'
 
 try
 {
-    $env:RABBITMQ_ALLOW_INPUT = 'true'
     $env:RABBITMQ_BASE = $rabbitmq_base
-    & $rabbitmq_server_cmd
+
+    try
+    {
+        $ErrorActionPreference = 'Continue'
+        & $rabbitmq_plugins_cmd enable rabbitmq_management rabbitmq_top rabbitmq_auth_mechanism_ssl
+    }
+    finally
+    {
+        $ErrorActionPreference = 'Stop'
+    }
+
+    & $rabbitmq_server_cmd -detached
+
+    try
+    {
+        Start-Sleep -Seconds 5
+        $ErrorActionPreference = 'Continue'
+        & $rabbitmqctl_cmd await_startup
+        & $rabbitmqctl_cmd add_user 'O=client,CN=localhost' 'unused'
+        & $rabbitmqctl_cmd set_permissions 'O=client,CN=localhost' '.*' '.*' '.*'
+    }
+    finally
+    {
+        $ErrorActionPreference = 'Stop'
+    }
 }
 finally
 {
-    Remove-Item -Path env:\RABBITMQ_ALLOW_INPUT
     Remove-Item -Path env:\RABBITMQ_BASE
 }
