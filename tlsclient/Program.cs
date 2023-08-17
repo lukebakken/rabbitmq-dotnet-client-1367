@@ -12,10 +12,10 @@ namespace tlsclient
             Console.WriteLine($"[INFO] working directory: {System.IO.Directory.GetCurrentDirectory()}");
             try
             {
-                string serverAddress = "localhost";
+                string serverAddress = "lab12app2.mel.labts.net";
                 int serverPort = 5671;
-                string certificatePath = "..\\certs\\client_localhost_certificate.pfx";
-                string certificatePassword = "test1234"; // Change to your certificate password
+                string certificatePath = "C:\\OHS\\certs\\newlabtswildcard.p12";
+                string certificatePassword = "changeit"; // Change to your certificate password
                 Console.WriteLine($"{serverAddress} \n {serverPort} \n {certificatePath} \n");
                 var client = new TcpClient();
                 client.Connect(serverAddress, serverPort);
